@@ -178,7 +178,6 @@ impl Window {
                 .expect("Unable to create resource");
 
                 unsafe {
-                    // winapi may have a bug, this should return HRESULT instead of ()
                     device.CreateRenderTargetView(resource.as_mut_ptr(), 0 as _, descriptor);
 
                     // TODO: Cast descriptor as CD3DX12_CPU_DESCRIPTOR_HANDLE and call
