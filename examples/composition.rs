@@ -2,14 +2,23 @@ use core::mem::MaybeUninit;
 use std::{convert::TryInto, rc::Weak};
 
 use d3d12::{
-    AlphaMode, CmdListType, CommandAllocator, CommandList, CommandQueue, CommandQueueFlags,
+    AlphaMode, Blob, CmdListType, CommandAllocator, CommandList, CommandQueue, CommandQueueFlags,
     CompDevice, CpuDescriptor, DescriptorHeap, DescriptorHeapFlags, DescriptorHeapType, Device,
     Factory2, Factory4, FactoryCreationFlags, FeatureLevel, GraphicsCommandList, PipelineState,
-    Priority, Resource, SampleDesc, Scaling, SwapChain, SwapChain1, SwapEffect, SwapchainDesc,
-    WeakPtr,
+    Priority, Resource, ResourceBarrier, RootParameter, RootSignatureVersion, SampleDesc, Scaling,
+    SwapChain, SwapChain1, SwapChain3, SwapChainPresentFlags, SwapEffect, SwapchainDesc, WeakPtr,
 };
-use winapi::um::winuser;
 use winapi::Interface;
+use winapi::{
+    shared::dxgi1_4::IDXGISwapChain3,
+    um::{
+        d3d12::{
+            D3D12_RESOURCE_BARRIER_FLAGS, D3D12_RESOURCE_BARRIER_FLAG_NONE,
+            D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET,
+        },
+        winuser,
+    },
+};
 use winapi::{
     shared::dxgitype::DXGI_USAGE_RENDER_TARGET_OUTPUT,
     um::dcomp::{
@@ -46,8 +55,9 @@ struct Window {
     list: Option<GraphicsCommandList>,
     desc_heap: Option<DescriptorHeap>,
     comp_device: Option<CompDevice>,
-    swap_chain: Option<SwapChain>,
+    swap_chain: Option<SwapChain3>,
     resources: Option<[Resource; NUM_OF_FRAMES]>,
+    current_frame: usize,
 }
 
 impl Window {
@@ -107,6 +117,8 @@ impl Window {
         }
         .expect("Unable to create command list");
 
+        list.close();
+
         // Factory 2
         let factory2: Factory2 = unsafe {
             let (ptr, hr) = factory.cast::<IDXGIFactory2>();
@@ -126,33 +138,64 @@ impl Window {
         }
         .expect("Unable to create composition device");
 
+        // // Create swap chain for composition
+        // let swap_chain = {
+        //     let (ptr, hr) = factory2.create_swapchain_for_composition_hwnd(
+        //         queue,
+        //         hwnd,
+        //         &SwapchainDesc {
+        //             width: 1024,
+        //             height: 1024,
+        //             format: DXGI_FORMAT_B8G8R8A8_UNORM, // Required for alpha
+        //             stereo: true,
+        //             sample: SampleDesc {
+        //                 count: 1,
+        //                 quality: 0,
+        //             },
+        //             buffer_usage: DXGI_USAGE_RENDER_TARGET_OUTPUT,
+        //             buffer_count: NUM_OF_FRAMES as _,
+        //             scaling: Scaling::Stretch,
+        //             swap_effect: SwapEffect::FlipSequential, // Required for alpha
+        //             alpha_mode: AlphaMode::Premultiplied,    // Required for alpha
+        //             flags: 0,
+        //         },
+        //         comp_device,
+        //     );
+        //     (hr == 0).then(|| ptr)
+        // }
+        // .expect("Unable to create swapchain")
+        // .as_swapchain0();
+
         // Create swap chain for composition
         let swap_chain = {
-            let (ptr, hr) = factory2.create_swapchain_for_composition_hwnd(
-                queue,
-                hwnd,
-                &SwapchainDesc {
-                    width: 1024,
-                    height: 1024,
-                    format: DXGI_FORMAT_B8G8R8A8_UNORM, // Required for alpha
-                    stereo: true,
-                    sample: SampleDesc {
-                        count: 1,
-                        quality: 0,
+            let sw = {
+                let (ptr, hr) = factory2.create_swapchain_for_hwnd(
+                    queue,
+                    hwnd,
+                    &SwapchainDesc {
+                        width: 1024,
+                        height: 1024,
+                        format: DXGI_FORMAT_B8G8R8A8_UNORM,
+                        stereo: true,
+                        sample: SampleDesc {
+                            count: 1,
+                            quality: 0,
+                        },
+                        buffer_usage: DXGI_USAGE_RENDER_TARGET_OUTPUT,
+                        buffer_count: NUM_OF_FRAMES as _,
+                        scaling: Scaling::Stretch,
+                        swap_effect: SwapEffect::FlipSequential,
+                        alpha_mode: AlphaMode::Ignore,
+                        flags: 0,
                     },
-                    buffer_usage: DXGI_USAGE_RENDER_TARGET_OUTPUT,
-                    buffer_count: NUM_OF_FRAMES as _,
-                    scaling: Scaling::Stretch,
-                    swap_effect: SwapEffect::FlipSequential, // Required for alpha
-                    alpha_mode: AlphaMode::Premultiplied,    // Required for alpha
-                    flags: 0,
-                },
-                comp_device,
-            );
+                );
+                (hr == 0).then(|| ptr)
+            }
+            .expect("Unable to create swapchain");
+            let (ptr, hr) = unsafe { sw.cast::<IDXGISwapChain3>() };
             (hr == 0).then(|| ptr)
         }
-        .expect("Unable to create swapchain")
-        .as_swapchain0();
+        .expect("Unable to cast swapchain");
 
         // Create heap descriptor
         let desc_heap = {
@@ -172,7 +215,7 @@ impl Window {
         let resources = (0..NUM_OF_FRAMES)
             .map(|i| {
                 let resource = {
-                    let (ptr, hr) = swap_chain.get_buffer(i as _);
+                    let (ptr, hr) = swap_chain.as_swapchain0().get_buffer(i as _);
                     (hr == 0).then(|| ptr)
                 }
                 .expect("Unable to create resource");
@@ -205,13 +248,82 @@ impl Window {
     pub fn load_assets(&self) {
         // _
         // TODO: Load something...
+        let root_signature_raw = Blob::null();
+        let error = d3d12::Error::null();
+        let device = self.device.unwrap();
+
+        // RootSignature::serialize(
+        //     RootSignatureVersion::V1_0,
+        //     RootParameter::constants(visibility, binding, num)
+
+        // )
+
+        // let root_signature = {
+        //     let (ptr, hr) = device.create_root_signature(root_signature_raw, 0);
+        //     (hr == 0).then(|| ptr)
+        // }
+        // .expect("Unable to create root signature");
     }
 
-    pub fn render(&self) {
-        if let Some(swap_chain) = self.swap_chain {
-            // swap_chain.device.Create
-        };
+    pub fn populate_command_list(&mut self) {
+        let allocator = self.allocator.unwrap();
+        let list = self.list.unwrap();
+        let resources = self.resources.unwrap();
+        let current_frame = self.current_frame;
+        let current_resource = resources[current_frame];
+        let heap = self.desc_heap.unwrap();
+
+        allocator.reset();
+
+        let barriers = [ResourceBarrier::transition(
+            current_resource,
+            0,
+            D3D12_RESOURCE_STATE_RENDER_TARGET,
+            D3D12_RESOURCE_STATE_PRESENT,
+            D3D12_RESOURCE_BARRIER_FLAG_NONE,
+        )];
+        list.resource_barrier(&barriers);
+
+        // current_resource.GetDesc();
+
+        unsafe {
+            let desc = heap.start_cpu_descriptor();
+            let bg = [0.0, 0.2, 0.4, 1.0];
+            list.ClearRenderTargetView(desc, &bg, 0, 0 as _);
+        }
+
+        // let _descriptor_inc_size = device.get_descriptor_increment_size(DescriptorHeapType::Rtv);
+        // // let oo = heap.GetCPUDescriptorHandleForHeapStart();
+        // list.ClearRenderTargetView(RenderTargetView, ColorRGBA, NumRects, pRects)
+
+        let barriers = [ResourceBarrier::transition(
+            current_resource,
+            0,
+            D3D12_RESOURCE_STATE_PRESENT,
+            D3D12_RESOURCE_STATE_RENDER_TARGET,
+            D3D12_RESOURCE_BARRIER_FLAG_NONE,
+        )];
+        list.resource_barrier(&barriers);
+
+        list.close();
+    }
+
+    pub fn render(&mut self) {
+        self.populate_command_list();
+        let queue = self.queue.unwrap();
+        let list = self.list.unwrap();
+        let swap_chain = self.swap_chain.unwrap();
+        let lists = [list.as_list()];
+        queue.execute_command_lists(&lists);
+        let hr = swap_chain
+            .as_swapchain0()
+            .present_flags(1, SwapChainPresentFlags::empty());
+        if hr > 0 {
+            panic!("Present failed");
+        }
         println!("Render");
+
+        self.current_frame = swap_chain.get_current_back_buffer_index() as usize;
     }
 }
 
@@ -237,11 +349,13 @@ unsafe extern "system" fn wndproc(
         comp_device: None,
         resources: None,
         swap_chain: None,
+        current_frame: 0,
     };
 
     match msg {
         winuser::WM_CREATE => {
             window.create_drawing_resources(hwnd);
+            window.load_assets();
             window.render();
             winuser::DefWindowProcA(hwnd, msg, wparam, lparam)
         }
@@ -273,7 +387,7 @@ fn main() {
         };
         winuser::RegisterClassA(&cls);
         let hwnd = winuser::CreateWindowExA(
-            winuser::WS_EX_NOREDIRECTIONBITMAP,
+            0, //winuser::WS_EX_NOREDIRECTIONBITMAP,
             "CompositionCls\0".as_ptr() as _,
             "Composition example\0".as_ptr() as _,
             winuser::WS_OVERLAPPEDWINDOW | winuser::WS_VISIBLE,
