@@ -148,64 +148,70 @@ impl Window {
         }
         .expect("Unable to create composition device");
 
-        // // Create swap chain for composition
-        // let swap_chain = {
-        //     let (ptr, hr) = factory2.create_swapchain_for_composition_hwnd(
-        //         queue,
-        //         hwnd,
-        //         &SwapchainDesc {
-        //             width: 1024,
-        //             height: 1024,
-        //             format: DXGI_FORMAT_B8G8R8A8_UNORM, // Required for alpha
-        //             stereo: true,
-        //             sample: SampleDesc {
-        //                 count: 1,
-        //                 quality: 0,
-        //             },
-        //             buffer_usage: DXGI_USAGE_RENDER_TARGET_OUTPUT,
-        //             buffer_count: NUM_OF_FRAMES as _,
-        //             scaling: Scaling::Stretch,
-        //             swap_effect: SwapEffect::FlipSequential, // Required for alpha
-        //             alpha_mode: AlphaMode::Premultiplied,    // Required for alpha
-        //             flags: 0,
-        //         },
-        //         comp_device,
-        //     );
-        //     (hr == 0).then(|| ptr)
-        // }
-        // .expect("Unable to create swapchain")
-        // .as_swapchain0();
-
         // Create swap chain for composition
         let swap_chain = {
-            let sw = {
-                let (ptr, hr) = factory2.create_swapchain_for_hwnd(
-                    queue,
-                    hwnd,
-                    &SwapchainDesc {
-                        width: 1024,
-                        height: 1024,
-                        format: DXGI_FORMAT_B8G8R8A8_UNORM,
-                        stereo: false,
-                        sample: SampleDesc {
-                            count: 1,
-                            quality: 0,
-                        },
-                        buffer_usage: DXGI_USAGE_RENDER_TARGET_OUTPUT,
-                        buffer_count: NUM_OF_FRAMES as _,
-                        scaling: Scaling::Stretch,
-                        swap_effect: SwapEffect::FlipSequential,
-                        alpha_mode: AlphaMode::Ignore,
-                        flags: 0,
+            let (ptr, hr) = factory2.create_swapchain_for_composition_hwnd(
+                queue,
+                hwnd,
+                &SwapchainDesc {
+                    width: 1024,
+                    height: 1024,
+                    format: DXGI_FORMAT_B8G8R8A8_UNORM, // Required for alpha
+                    stereo: true,
+                    sample: SampleDesc {
+                        count: 1,
+                        quality: 0,
                     },
-                );
-                (hr == 0).then(|| ptr)
-            }
-            .expect("Unable to create swapchain");
-            let (ptr, hr) = unsafe { sw.cast::<IDXGISwapChain3>() };
+                    buffer_usage: DXGI_USAGE_RENDER_TARGET_OUTPUT,
+                    buffer_count: NUM_OF_FRAMES as _,
+                    scaling: Scaling::Stretch,
+                    swap_effect: SwapEffect::FlipSequential, // Required for alpha
+                    alpha_mode: AlphaMode::Premultiplied,    // Required for alpha
+                    flags: 0,
+                },
+                comp_device,
+            );
             (hr == 0).then(|| ptr)
         }
-        .expect("Unable to cast swapchain");
+        .expect("Unable to create swapchain")
+        .as_swapchain0();
+
+        let swap_chain = {
+            let (ptr, hr) = unsafe { swap_chain.cast::<IDXGISwapChain3>() };
+            (hr == 0).then(|| ptr)
+        }
+        .expect("Unable to cast swap chain");
+
+        // // Create swap chain for composition
+        // let swap_chain = {
+        //     let sw = {
+        //         let (ptr, hr) = factory2.create_swapchain_for_hwnd(
+        //             queue,
+        //             hwnd,
+        //             &SwapchainDesc {
+        //                 width: 1024,
+        //                 height: 1024,
+        //                 format: DXGI_FORMAT_B8G8R8A8_UNORM,
+        //                 stereo: false,
+        //                 sample: SampleDesc {
+        //                     count: 1,
+        //                     quality: 0,
+        //                 },
+        //                 buffer_usage: DXGI_USAGE_RENDER_TARGET_OUTPUT,
+        //                 buffer_count: NUM_OF_FRAMES as _,
+        //                 scaling: Scaling::Stretch,
+        //                 swap_effect: SwapEffect::FlipSequential,
+        //                 alpha_mode: AlphaMode::Ignore,
+        //                 flags: 0,
+        //             },
+        //         );
+        //         (hr == 0).then(|| ptr)
+        //     }
+        //     .expect("Unable to create swapchain");
+        //     let (ptr, hr) = unsafe { sw.cast::<IDXGISwapChain3>() };
+        //     (hr == 0).then(|| ptr)
+        // }
+        // .expect("Unable to cast swapchain");
 
         // Create heap descriptor
         let desc_heap = {
@@ -561,7 +567,7 @@ fn main() {
         };
         winuser::RegisterClassA(&cls);
         let hwnd = winuser::CreateWindowExA(
-            0, //winuser::WS_EX_NOREDIRECTIONBITMAP,
+            winuser::WS_EX_NOREDIRECTIONBITMAP,
             "CompositionCls\0".as_ptr() as _,
             "Composition example\0".as_ptr() as _,
             winuser::WS_OVERLAPPEDWINDOW | winuser::WS_VISIBLE,
