@@ -2,6 +2,7 @@ use crate::{com::WeakPtr, CommandQueue, D3DResult, Resource, SampleDesc, HRESULT
 use std::ptr;
 use winapi::{
     shared::{dxgi, dxgi1_2, dxgi1_3, dxgi1_4, dxgiformat, dxgitype, windef::HWND},
+    um::dcomp::{IDCompositionDevice, IDCompositionTarget, IDCompositionVisual},
     um::{d3d12, dxgidebug},
     Interface,
 };
@@ -46,6 +47,9 @@ pub type InfoQueue = WeakPtr<dxgidebug::IDXGIInfoQueue>;
 pub type SwapChain = WeakPtr<dxgi::IDXGISwapChain>;
 pub type SwapChain1 = WeakPtr<dxgi1_2::IDXGISwapChain1>;
 pub type SwapChain3 = WeakPtr<dxgi1_4::IDXGISwapChain3>;
+pub type CompDevice = WeakPtr<IDCompositionDevice>;
+pub type CompTarget = WeakPtr<IDCompositionTarget>;
+pub type CompVisual = WeakPtr<IDCompositionVisual>;
 
 #[cfg(feature = "libloading")]
 #[derive(Debug)]
@@ -114,6 +118,57 @@ pub struct SwapchainDesc {
 }
 
 impl Factory2 {
+    pub fn create_swapchain_for_composition_hwnd(
+        &self,
+        queue: CommandQueue,
+        hwnd: HWND,
+        desc: &SwapchainDesc,
+        comp_device: CompDevice,
+    ) -> D3DResult<SwapChain1> {
+        let desc = dxgi1_2::DXGI_SWAP_CHAIN_DESC1 {
+            AlphaMode: desc.alpha_mode as _,
+            BufferCount: desc.buffer_count,
+            Width: desc.width,
+            Height: desc.height,
+            Format: desc.format,
+            Flags: desc.flags,
+            BufferUsage: desc.buffer_usage,
+            SampleDesc: dxgitype::DXGI_SAMPLE_DESC {
+                Count: desc.sample.count,
+                Quality: desc.sample.quality,
+            },
+            Scaling: desc.scaling as _,
+            Stereo: desc.stereo as _,
+            SwapEffect: desc.swap_effect as _,
+        };
+        let mut swap_chain = SwapChain1::null();
+        let hr = unsafe {
+            self.CreateSwapChainForComposition(
+                queue.as_mut_ptr() as *mut _,
+                &desc,
+                ptr::null_mut(),
+                swap_chain.mut_void() as _,
+            )
+        };
+
+        // Create IDCompositionTarget for the window
+        let mut comp_target = CompTarget::null();
+        unsafe { comp_device.CreateTargetForHwnd(hwnd as _, 1, comp_target.mut_void() as _) };
+
+        // Create IDCompositionVisual
+        let mut comp_visual = CompVisual::null();
+        unsafe { comp_device.CreateVisual(comp_visual.mut_void() as _) };
+
+        // Set swap_chain and the root visual and commit
+        unsafe {
+            comp_visual.SetContent(swap_chain.as_mut_ptr() as _);
+            comp_target.SetRoot(comp_visual.as_mut_ptr() as _);
+            comp_device.Commit();
+        }
+
+        (swap_chain, hr)
+    }
+
     // TODO: interface not complete
     pub fn create_swapchain_for_hwnd(
         &self,
