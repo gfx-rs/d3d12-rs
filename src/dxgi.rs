@@ -1,8 +1,10 @@
-use crate::{com::WeakPtr, CommandQueue, D3DResult, Resource, SampleDesc, HRESULT};
+use crate::{com::WeakPtr, D3DResult, Resource, SampleDesc, HRESULT};
 use std::ptr;
 use winapi::{
-    shared::{dxgi, dxgi1_2, dxgi1_3, dxgi1_4, dxgiformat, dxgitype, windef::HWND},
-    um::{d3d12, dxgidebug},
+    shared::{
+        dxgi, dxgi1_2, dxgi1_3, dxgi1_4, dxgiformat, dxgitype, minwindef::TRUE, windef::HWND,
+    },
+    um::{d3d12, dxgidebug, unknwnbase::IUnknown},
     Interface,
 };
 
@@ -40,6 +42,7 @@ pub enum AlphaMode {
 }
 
 pub type Adapter1 = WeakPtr<dxgi::IDXGIAdapter1>;
+pub type Factory1 = WeakPtr<dxgi::IDXGIFactory1>;
 pub type Factory2 = WeakPtr<dxgi1_2::IDXGIFactory2>;
 pub type Factory4 = WeakPtr<dxgi1_4::IDXGIFactory4>;
 pub type InfoQueue = WeakPtr<dxgidebug::IDXGIInfoQueue>;
@@ -82,6 +85,21 @@ impl DxgiLib {
         Ok((factory, hr))
     }
 
+    pub fn create_factory1(&self) -> Result<D3DResult<Factory1>, libloading::Error> {
+        type Fun = extern "system" fn(
+            winapi::shared::guiddef::REFIID,
+            *mut *mut winapi::ctypes::c_void,
+        ) -> HRESULT;
+
+        let mut factory = Factory1::null();
+        let hr = unsafe {
+            let func: libloading::Symbol<Fun> = self.lib.get(b"CreateDXGIFactory1")?;
+            func(&dxgi::IDXGIFactory1::uuidof(), factory.mut_void())
+        };
+
+        Ok((factory, hr))
+    }
+
     pub fn get_debug_interface1(&self) -> Result<D3DResult<InfoQueue>, libloading::Error> {
         type Fun = extern "system" fn(
             winapi::shared::minwindef::UINT,
@@ -113,11 +131,50 @@ pub struct SwapchainDesc {
     pub flags: u32,
 }
 
+impl Factory1 {
+    pub fn create_swapchain(
+        &self,
+        queue: *mut IUnknown,
+        hwnd: HWND,
+        desc: &SwapchainDesc,
+    ) -> D3DResult<SwapChain> {
+        let mut desc = dxgi::DXGI_SWAP_CHAIN_DESC {
+            BufferDesc: dxgitype::DXGI_MODE_DESC {
+                Width: desc.width,
+                Height: desc.width,
+                RefreshRate: dxgitype::DXGI_RATIONAL {
+                    Numerator: 1,
+                    Denominator: 60,
+                },
+                Format: desc.format,
+                ScanlineOrdering: dxgitype::DXGI_MODE_SCANLINE_ORDER_UNSPECIFIED,
+                Scaling: dxgitype::DXGI_MODE_SCALING_UNSPECIFIED,
+            },
+            SampleDesc: dxgitype::DXGI_SAMPLE_DESC {
+                Count: desc.sample.count,
+                Quality: desc.sample.quality,
+            },
+            BufferUsage: desc.buffer_usage,
+            BufferCount: desc.buffer_count,
+            OutputWindow: hwnd,
+            Windowed: TRUE,
+            SwapEffect: desc.swap_effect as _,
+            Flags: desc.flags,
+        };
+
+        let mut swapchain = SwapChain::null();
+        let hr =
+            unsafe { self.CreateSwapChain(queue, &mut desc, swapchain.mut_void() as *mut *mut _) };
+
+        (swapchain, hr)
+    }
+}
+
 impl Factory2 {
     // TODO: interface not complete
     pub fn create_swapchain_for_hwnd(
         &self,
-        queue: CommandQueue,
+        queue: *mut IUnknown,
         hwnd: HWND,
         desc: &SwapchainDesc,
     ) -> D3DResult<SwapChain1> {
@@ -141,7 +198,7 @@ impl Factory2 {
         let mut swap_chain = SwapChain1::null();
         let hr = unsafe {
             self.CreateSwapChainForHwnd(
-                queue.as_mut_ptr() as *mut _,
+                queue,
                 hwnd,
                 &desc,
                 ptr::null(),
