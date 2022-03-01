@@ -130,6 +130,26 @@ pub struct SwapchainDesc {
     pub alpha_mode: AlphaMode,
     pub flags: u32,
 }
+impl SwapchainDesc {
+    pub fn to_desc1(&self) -> dxgi1_2::DXGI_SWAP_CHAIN_DESC1 {
+        dxgi1_2::DXGI_SWAP_CHAIN_DESC1 {
+            AlphaMode: self.alpha_mode as _,
+            BufferCount: self.buffer_count,
+            Width: self.width,
+            Height: self.height,
+            Format: self.format,
+            Flags: self.flags,
+            BufferUsage: self.buffer_usage,
+            SampleDesc: dxgitype::DXGI_SAMPLE_DESC {
+                Count: self.sample.count,
+                Quality: self.sample.quality,
+            },
+            Scaling: self.scaling as _,
+            Stereo: self.stereo as _,
+            SwapEffect: self.swap_effect as _,
+        }
+    }
+}
 
 impl Factory1 {
     pub fn create_swapchain(
@@ -178,30 +198,31 @@ impl Factory2 {
         hwnd: HWND,
         desc: &SwapchainDesc,
     ) -> D3DResult<SwapChain1> {
-        let desc = dxgi1_2::DXGI_SWAP_CHAIN_DESC1 {
-            AlphaMode: desc.alpha_mode as _,
-            BufferCount: desc.buffer_count,
-            Width: desc.width,
-            Height: desc.height,
-            Format: desc.format,
-            Flags: desc.flags,
-            BufferUsage: desc.buffer_usage,
-            SampleDesc: dxgitype::DXGI_SAMPLE_DESC {
-                Count: desc.sample.count,
-                Quality: desc.sample.quality,
-            },
-            Scaling: desc.scaling as _,
-            Stereo: desc.stereo as _,
-            SwapEffect: desc.swap_effect as _,
-        };
-
         let mut swap_chain = SwapChain1::null();
         let hr = unsafe {
             self.CreateSwapChainForHwnd(
                 queue,
                 hwnd,
-                &desc,
+                &desc.to_desc1(),
                 ptr::null(),
+                ptr::null_mut(),
+                swap_chain.mut_void() as *mut *mut _,
+            )
+        };
+
+        (swap_chain, hr)
+    }
+
+    pub fn create_swapchain_for_composition(
+        &self,
+        queue: *mut IUnknown,
+        desc: &SwapchainDesc,
+    ) -> D3DResult<SwapChain1> {
+        let mut swap_chain = SwapChain1::null();
+        let hr = unsafe {
+            self.CreateSwapChainForComposition(
+                queue,
+                &desc.to_desc1(),
                 ptr::null_mut(),
                 swap_chain.mut_void() as *mut *mut _,
             )
