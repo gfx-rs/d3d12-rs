@@ -2,7 +2,8 @@ use crate::{com::WeakPtr, D3DResult, Resource, SampleDesc, HRESULT};
 use std::ptr;
 use winapi::{
     shared::{
-        dxgi, dxgi1_2, dxgi1_3, dxgi1_4, dxgiformat, dxgitype, minwindef::TRUE, windef::HWND,
+        dxgi, dxgi1_2, dxgi1_3, dxgi1_4, dxgi1_6, dxgiformat, dxgitype, minwindef::TRUE,
+        windef::HWND,
     },
     um::{d3d12, dxgidebug, unknwnbase::IUnknown},
     Interface,
@@ -45,6 +46,7 @@ pub type Adapter1 = WeakPtr<dxgi::IDXGIAdapter1>;
 pub type Factory1 = WeakPtr<dxgi::IDXGIFactory1>;
 pub type Factory2 = WeakPtr<dxgi1_2::IDXGIFactory2>;
 pub type Factory4 = WeakPtr<dxgi1_4::IDXGIFactory4>;
+pub type Factory6 = WeakPtr<dxgi1_6::IDXGIFactory6>;
 pub type InfoQueue = WeakPtr<dxgidebug::IDXGIInfoQueue>;
 pub type SwapChain = WeakPtr<dxgi::IDXGISwapChain>;
 pub type SwapChain1 = WeakPtr<dxgi1_2::IDXGISwapChain1>;
