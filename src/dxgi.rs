@@ -42,18 +42,28 @@ pub enum AlphaMode {
     ForceDword = dxgi1_2::DXGI_ALPHA_MODE_FORCE_DWORD,
 }
 
+pub type InfoQueue = WeakPtr<dxgidebug::IDXGIInfoQueue>;
+
 pub type Adapter1 = WeakPtr<dxgi::IDXGIAdapter1>;
+pub type Adapter2 = WeakPtr<dxgi1_2::IDXGIAdapter2>;
+pub type Adapter3 = WeakPtr<dxgi1_4::IDXGIAdapter3>;
+pub type Adapter4 = WeakPtr<dxgi1_6::IDXGIAdapter4>;
+crate::weak_com_inheritance_chain! {
+    #[derive(Debug, Copy, Clone, PartialEq, Hash)]
+    pub enum DxgiAdapter {
+        Adapter1(dxgi::IDXGIAdapter1), from_adapter1, as_adapter1, unwrap_adapter1;
+        Adapter2(dxgi1_2::IDXGIAdapter2), from_adapter2, as_adapter2, unwrap_adapter2;
+        Adapter3(dxgi1_4::IDXGIAdapter3), from_adapter3, as_adapter3, unwrap_adapter3;
+        Adapter4(dxgi1_6::IDXGIAdapter4), from_adapter4, as_adapter4, unwrap_adapter4;
+    }
+}
+
 pub type Factory1 = WeakPtr<dxgi::IDXGIFactory1>;
 pub type Factory2 = WeakPtr<dxgi1_2::IDXGIFactory2>;
 pub type Factory3 = WeakPtr<dxgi1_3::IDXGIFactory3>;
 pub type Factory4 = WeakPtr<dxgi1_4::IDXGIFactory4>;
 pub type Factory5 = WeakPtr<dxgi1_5::IDXGIFactory5>;
 pub type Factory6 = WeakPtr<dxgi1_6::IDXGIFactory6>;
-pub type InfoQueue = WeakPtr<dxgidebug::IDXGIInfoQueue>;
-pub type SwapChain = WeakPtr<dxgi::IDXGISwapChain>;
-pub type SwapChain1 = WeakPtr<dxgi1_2::IDXGISwapChain1>;
-pub type SwapChain3 = WeakPtr<dxgi1_4::IDXGISwapChain3>;
-
 crate::weak_com_inheritance_chain! {
     #[derive(Debug, Copy, Clone, PartialEq, Hash)]
     pub enum DxgiFactory {
@@ -66,6 +76,10 @@ crate::weak_com_inheritance_chain! {
     }
 }
 
+pub type SwapChain = WeakPtr<dxgi::IDXGISwapChain>;
+pub type SwapChain1 = WeakPtr<dxgi1_2::IDXGISwapChain1>;
+pub type SwapChain2 = WeakPtr<dxgi1_3::IDXGISwapChain2>;
+pub type SwapChain3 = WeakPtr<dxgi1_4::IDXGISwapChain3>;
 crate::weak_com_inheritance_chain! {
     #[derive(Debug, Copy, Clone, PartialEq, Hash)]
     pub enum DxgiSwapchain {
