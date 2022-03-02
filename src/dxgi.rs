@@ -2,7 +2,7 @@ use crate::{com::WeakPtr, D3DResult, Resource, SampleDesc, HRESULT};
 use std::ptr;
 use winapi::{
     shared::{
-        dxgi, dxgi1_2, dxgi1_3, dxgi1_4, dxgi1_6, dxgiformat, dxgitype, minwindef::TRUE,
+        dxgi, dxgi1_2, dxgi1_3, dxgi1_4, dxgi1_5, dxgi1_6, dxgiformat, dxgitype, minwindef::TRUE,
         windef::HWND,
     },
     um::{d3d12, dxgidebug, unknwnbase::IUnknown},
@@ -45,12 +45,36 @@ pub enum AlphaMode {
 pub type Adapter1 = WeakPtr<dxgi::IDXGIAdapter1>;
 pub type Factory1 = WeakPtr<dxgi::IDXGIFactory1>;
 pub type Factory2 = WeakPtr<dxgi1_2::IDXGIFactory2>;
+pub type Factory3 = WeakPtr<dxgi1_3::IDXGIFactory3>;
 pub type Factory4 = WeakPtr<dxgi1_4::IDXGIFactory4>;
+pub type Factory5 = WeakPtr<dxgi1_5::IDXGIFactory5>;
 pub type Factory6 = WeakPtr<dxgi1_6::IDXGIFactory6>;
 pub type InfoQueue = WeakPtr<dxgidebug::IDXGIInfoQueue>;
 pub type SwapChain = WeakPtr<dxgi::IDXGISwapChain>;
 pub type SwapChain1 = WeakPtr<dxgi1_2::IDXGISwapChain1>;
 pub type SwapChain3 = WeakPtr<dxgi1_4::IDXGISwapChain3>;
+
+crate::weak_com_inheritance_chain! {
+    #[derive(Debug, Copy, Clone, PartialEq, Hash)]
+    pub enum DxgiFactory {
+        Factory1(dxgi::IDXGIFactory1), from_factory1, as_factory1, unwrap_factory1;
+        Factory2(dxgi1_2::IDXGIFactory2), from_factory2, as_factory2, unwrap_factory2;
+        Factory3(dxgi1_3::IDXGIFactory3), from_factory3, as_factory3, unwrap_factory3;
+        Factory4(dxgi1_4::IDXGIFactory4), from_factory4, as_factory4, unwrap_factory4;
+        Factory5(dxgi1_5::IDXGIFactory5), from_factory5, as_factory5, unwrap_factory5;
+        Factory6(dxgi1_6::IDXGIFactory6), from_factory6, as_factory6, unwrap_factory6;
+    }
+}
+
+crate::weak_com_inheritance_chain! {
+    #[derive(Debug, Copy, Clone, PartialEq, Hash)]
+    pub enum DxgiSwapchain {
+        SwapChain(dxgi::IDXGISwapChain), from_swap_chain, as_swap_chain, unwrap_swap_chain;
+        SwapChain1(dxgi1_2::IDXGISwapChain1), from_swap_chain1, as_swap_chain1, unwrap_swap_chain1;
+        SwapChain2(dxgi1_3::IDXGISwapChain2), from_swap_chain2, as_swap_chain2, unwrap_swap_chain2;
+        SwapChain3(dxgi1_4::IDXGISwapChain3), from_swap_chain3, as_swap_chain3, unwrap_swap_chain3;
+    }
+}
 
 #[cfg(feature = "libloading")]
 #[derive(Debug)]
@@ -249,10 +273,6 @@ impl Factory4 {
         (factory, hr)
     }
 
-    pub fn as_factory2(&self) -> Factory2 {
-        unsafe { Factory2::from_raw(self.as_mut_ptr() as *mut _) }
-    }
-
     pub fn enumerate_adapters(&self, id: u32) -> D3DResult<Adapter1> {
         let mut adapter = Adapter1::null();
         let hr = unsafe { self.EnumAdapters1(id, adapter.mut_void() as *mut *mut _) };
@@ -294,17 +314,7 @@ impl SwapChain {
     }
 }
 
-impl SwapChain1 {
-    pub fn as_swapchain0(&self) -> SwapChain {
-        unsafe { SwapChain::from_raw(self.as_mut_ptr() as *mut _) }
-    }
-}
-
 impl SwapChain3 {
-    pub fn as_swapchain0(&self) -> SwapChain {
-        unsafe { SwapChain::from_raw(self.as_mut_ptr() as *mut _) }
-    }
-
     pub fn get_current_back_buffer_index(&self) -> u32 {
         unsafe { self.GetCurrentBackBufferIndex() }
     }
