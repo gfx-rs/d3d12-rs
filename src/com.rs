@@ -113,9 +113,9 @@ impl<T> Hash for WeakPtr<T> {
 /// ```no_compile,rust
 /// weak_com_inheritance_chain! {
 ///     pub enum MyComObject {
-///         MyComObject(actual::ComObject), from_my_com_object, as_my_com_object, unwrap_my_com_object,
-///         MyComObject1(actual::ComObject1), from_my_com_object1, as_my_com_object1, unwrap_my_com_object1,
-///         MyComObject2(actual::ComObject2), from_my_com_object2, as_my_com_object2, unwrap_my_com_object2,
+///         MyComObject(actual::ComObject), from_my_com_object; as_my_com_object, my_com_object; // First variant doesn't use "unwrap" as it can never fail
+///         MyComObject1(actual::ComObject1), from_my_com_object1, as_my_com_object1, unwrap_my_com_object1;
+///         MyComObject2(actual::ComObject2), from_my_com_object2, as_my_com_object2, unwrap_my_com_object2;
 ///     }
 /// }
 /// ```
@@ -129,11 +129,13 @@ macro_rules! weak_com_inheritance_chain {
     (
         $(#[$meta:meta])*
         $vis:vis enum $name:ident {
-            $($variant:ident($type:ty), $from_name:ident, $as_name:ident, $unwrap_name:ident);+ $(;)?
+            $first_variant:ident($first_type:ty), $first_from_name:ident, $first_as_name:ident, $first_unwrap_name:ident $(;)?
+            $($variant:ident($type:ty), $from_name:ident, $as_name:ident, $unwrap_name:ident);* $(;)?
         }
     ) => {
         $(#[$meta])*
         $vis enum $name {
+            $first_variant($crate::WeakPtr<$first_type>),
             $(
                 $variant($crate::WeakPtr<$type>)
             ),+
@@ -141,6 +143,7 @@ macro_rules! weak_com_inheritance_chain {
         impl $name {
             $vis unsafe fn destroy(&self) {
                 match *self {
+                    Self::$first_variant(v) => v.destroy(),
                     $(
                         Self::$variant(v) => v.destroy(),
                     )*
@@ -151,7 +154,15 @@ macro_rules! weak_com_inheritance_chain {
                 @recursion_logic,
                 $vis,
                 ;
+                $first_variant($first_type), $first_from_name, $first_as_name, $first_unwrap_name;
                 $($variant($type), $from_name, $as_name, $unwrap_name);*
+            }
+        }
+
+        impl std::ops::Deref for $name {
+            type Target = $crate::WeakPtr<$first_type>;
+            fn deref(&self) -> &Self::Target {
+                self.$first_unwrap_name()
             }
         }
     };
@@ -207,15 +218,16 @@ macro_rules! weak_com_inheritance_chain {
         }
 
         #[doc = concat!("Returns Some if the value implements ", stringify!($type), " otherwise returns None.")]
-        $vis fn $as_name(&self) -> Option<$crate::WeakPtr<$type>> {
+        $vis fn $as_name(&self) -> Option<&$crate::WeakPtr<$type>> {
             match *self {
                 $(
                     Self::$prev_variant(_) => None,
                 )*
-                Self::$variant(v) => Some(v),
+                Self::$variant(ref v) => Some(v),
                 $(
-                    Self::$next_variant(v) => {
-                        Some(unsafe { $crate::WeakPtr::from_raw(v.as_mut_ptr() as *mut $type) })
+                    Self::$next_variant(ref v) => {
+                        // v is &WeakPtr<NextType> and se cast to &WeakPtr<Type>
+                        Some(unsafe { std::mem::transmute(v) })
                     }
                 )*
             }
@@ -223,15 +235,16 @@ macro_rules! weak_com_inheritance_chain {
 
         #[doc = concat!("Returns ", stringify!($type), " if the value implements it, otherwise panics.")]
         #[track_caller]
-        $vis fn $unwrap_name(&self) -> $crate::WeakPtr<$type> {
+        $vis fn $unwrap_name(&self) -> &$crate::WeakPtr<$type> {
             match *self {
                 $(
                     Self::$prev_variant(_) => panic!(concat!("Tried to unwrap a ", stringify!($prev_variant), " as a ", stringify!($variant))),
                 )*
-                Self::$variant(v) => v,
+                Self::$variant(ref v) => &*v,
                 $(
-                    Self::$next_variant(v) => {
-                        unsafe { $crate::WeakPtr::from_raw(v.as_mut_ptr() as *mut $type) }
+                    Self::$next_variant(ref v) => {
+                        // v is &WeakPtr<NextType> and se cast to &WeakPtr<Type>
+                        unsafe { std::mem::transmute(v) }
                     }
                 )*
             }

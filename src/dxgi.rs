@@ -51,7 +51,7 @@ pub type Adapter4 = WeakPtr<dxgi1_6::IDXGIAdapter4>;
 crate::weak_com_inheritance_chain! {
     #[derive(Debug, Copy, Clone, PartialEq, Hash)]
     pub enum DxgiAdapter {
-        Adapter1(dxgi::IDXGIAdapter1), from_adapter1, as_adapter1, unwrap_adapter1;
+        Adapter1(dxgi::IDXGIAdapter1), from_adapter1, as_adapter1, adapter1;
         Adapter2(dxgi1_2::IDXGIAdapter2), from_adapter2, as_adapter2, unwrap_adapter2;
         Adapter3(dxgi1_4::IDXGIAdapter3), from_adapter3, as_adapter3, unwrap_adapter3;
         Adapter4(dxgi1_6::IDXGIAdapter4), from_adapter4, as_adapter4, unwrap_adapter4;
@@ -67,7 +67,7 @@ pub type Factory6 = WeakPtr<dxgi1_6::IDXGIFactory6>;
 crate::weak_com_inheritance_chain! {
     #[derive(Debug, Copy, Clone, PartialEq, Hash)]
     pub enum DxgiFactory {
-        Factory1(dxgi::IDXGIFactory1), from_factory1, as_factory1, unwrap_factory1;
+        Factory1(dxgi::IDXGIFactory1), from_factory1, as_factory1, factory1;
         Factory2(dxgi1_2::IDXGIFactory2), from_factory2, as_factory2, unwrap_factory2;
         Factory3(dxgi1_3::IDXGIFactory3), from_factory3, as_factory3, unwrap_factory3;
         Factory4(dxgi1_4::IDXGIFactory4), from_factory4, as_factory4, unwrap_factory4;
@@ -83,7 +83,7 @@ pub type SwapChain3 = WeakPtr<dxgi1_4::IDXGISwapChain3>;
 crate::weak_com_inheritance_chain! {
     #[derive(Debug, Copy, Clone, PartialEq, Hash)]
     pub enum DxgiSwapchain {
-        SwapChain(dxgi::IDXGISwapChain), from_swap_chain, as_swap_chain, unwrap_swap_chain;
+        SwapChain(dxgi::IDXGISwapChain), from_swap_chain, as_swap_chain, swap_chain;
         SwapChain1(dxgi1_2::IDXGISwapChain1), from_swap_chain1, as_swap_chain1, unwrap_swap_chain1;
         SwapChain2(dxgi1_3::IDXGISwapChain2), from_swap_chain2, as_swap_chain2, unwrap_swap_chain2;
         SwapChain3(dxgi1_4::IDXGISwapChain3), from_swap_chain3, as_swap_chain3, unwrap_swap_chain3;
