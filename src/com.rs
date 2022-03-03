@@ -31,8 +31,12 @@ impl<T> WeakPtr<T> {
         self.0
     }
 
-    pub unsafe fn mut_void(&mut self) -> *mut *mut c_void {
+    pub fn mut_void(&mut self) -> *mut *mut c_void {
         &mut self.0 as *mut *mut _ as *mut *mut _
+    }
+
+    pub fn mut_self(&mut self) -> *mut *mut T {
+        &mut self.0 as *mut *mut _
     }
 }
 
