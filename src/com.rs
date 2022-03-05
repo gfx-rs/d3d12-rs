@@ -216,12 +216,12 @@ macro_rules! weak_com_inheritance_chain {
         $variant:ident($type:ty);
         $($next_variant:ident),*;
     ) => {
-        #[doc = concat!("Construct this enum from weak pointer to a ", stringify!($type), ". For best usability, always use the highest constructor you can. This doesn't try to upcast.")]
+        // Construct this enum from weak pointer to this interface. For best usability, always use the highest constructor you can. This doesn't try to upcast.
         $vis unsafe fn $from_name(value: $crate::WeakPtr<$type>) -> Self {
             Self::$variant(value)
         }
 
-        #[doc = concat!("Returns Some if the value implements ", stringify!($type), " otherwise returns None.")]
+        // Returns Some if the value implements the interface otherwise returns None.
         $vis fn $as_name(&self) -> Option<&$crate::WeakPtr<$type>> {
             match *self {
                 $(
@@ -237,7 +237,7 @@ macro_rules! weak_com_inheritance_chain {
             }
         }
 
-        #[doc = concat!("Returns ", stringify!($type), " if the value implements it, otherwise panics.")]
+        // Returns the interface if the value implements it, otherwise panics.
         #[track_caller]
         $vis fn $unwrap_name(&self) -> &$crate::WeakPtr<$type> {
             match *self {
