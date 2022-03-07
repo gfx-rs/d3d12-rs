@@ -114,10 +114,16 @@ impl<T> Hash for WeakPtr<T> {
 /// - the as function (`&self -> Option<WeakPtr<actual::ComObject1>>`)
 /// - the unwrap function (`&self -> WeakPtr<actual::ComObject1>` panicing on failure to cast)
 ///
-/// ```no_compile,rust
+/// ```rust
+/// # pub use d3d12::weak_com_inheritance_chain;
+/// # mod actual { 
+/// #     pub struct ComObject; impl winapi::Interface for ComObject { fn uuidof() -> winapi::shared::guiddef::GUID { todo!() } } 
+/// #     pub struct ComObject1; impl winapi::Interface for ComObject1 { fn uuidof() -> winapi::shared::guiddef::GUID { todo!() } }
+/// #     pub struct ComObject2; impl winapi::Interface for ComObject2 { fn uuidof() -> winapi::shared::guiddef::GUID { todo!() } }
+/// # }
 /// weak_com_inheritance_chain! {
 ///     pub enum MyComObject {
-///         MyComObject(actual::ComObject), from_my_com_object; as_my_com_object, my_com_object; // First variant doesn't use "unwrap" as it can never fail
+///         MyComObject(actual::ComObject), from_my_com_object, as_my_com_object, my_com_object; // First variant doesn't use "unwrap" as it can never fail
 ///         MyComObject1(actual::ComObject1), from_my_com_object1, as_my_com_object1, unwrap_my_com_object1;
 ///         MyComObject2(actual::ComObject2), from_my_com_object2, as_my_com_object2, unwrap_my_com_object2;
 ///     }

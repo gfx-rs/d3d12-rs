@@ -64,6 +64,7 @@ pub struct SampleDesc {
 }
 
 #[repr(u32)]
+#[non_exhaustive]
 pub enum FeatureLevel {
     L9_1 = d3dcommon::D3D_FEATURE_LEVEL_9_1,
     L9_2 = d3dcommon::D3D_FEATURE_LEVEL_9_2,
