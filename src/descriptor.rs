@@ -172,8 +172,8 @@ impl fmt::Debug for RootParameter {
                     raw.NumDescriptorRanges as usize,
                 ))
             },
-            d3d12::D3D12_ROOT_PARAMETER_TYPE_32BIT_CONSTANTS => unsafe {
-                let raw = self.0.u.Constants();
+            d3d12::D3D12_ROOT_PARAMETER_TYPE_32BIT_CONSTANTS => {
+                let raw =unsafe {self.0.u.Constants()};
                 Inner::Constants {
                     binding: Binding {
                         space: raw.RegisterSpace,
@@ -182,8 +182,8 @@ impl fmt::Debug for RootParameter {
                     num: raw.Num32BitValues,
                 }
             },
-            _ => unsafe {
-                let raw = self.0.u.Descriptor();
+            _ => {
+                let raw = unsafe {self.0.u.Descriptor()};
                 let binding = Binding {
                     space: raw.RegisterSpace,
                     register: raw.ShaderRegister,
