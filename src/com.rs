@@ -15,7 +15,7 @@ impl<T: Interface> ComPtr<T> {
         ComPtr(ptr::null_mut())
     }
 
-    pub unsafe fn from_raw(raw: *mut T) -> Self {
+    pub fn from_raw(raw: *mut T) -> Self {
         if !raw.is_null() {
             (&*(raw as *mut IUnknown)).AddRef();
         }
