@@ -35,11 +35,11 @@ impl<T: Interface> ComPtr<T> {
     }
 
     pub fn mut_void(&mut self) -> *mut *mut c_void {
-        &mut self.0 as *mut *mut _ as *mut *mut _
+        (&mut self.0).cast()
     }
 
     pub fn mut_self(&mut self) -> *mut *mut T {
-        &mut self.0 as *mut *mut _
+        &mut self.0
     }
 }
 
