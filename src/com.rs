@@ -121,8 +121,8 @@ impl<T: Interface> Hash for ComPtr<T> {
 ///
 /// ```rust
 /// # pub use d3d12::weak_com_inheritance_chain;
-/// # mod actual { 
-/// #     pub struct ComObject; impl winapi::Interface for ComObject { fn uuidof() -> winapi::shared::guiddef::GUID { todo!() } } 
+/// # mod actual {
+/// #     pub struct ComObject; impl winapi::Interface for ComObject { fn uuidof() -> winapi::shared::guiddef::GUID { todo!() } }
 /// #     pub struct ComObject1; impl winapi::Interface for ComObject1 { fn uuidof() -> winapi::shared::guiddef::GUID { todo!() } }
 /// #     pub struct ComObject2; impl winapi::Interface for ComObject2 { fn uuidof() -> winapi::shared::guiddef::GUID { todo!() } }
 /// # }
