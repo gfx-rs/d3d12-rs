@@ -1,5 +1,4 @@
-#[macro_use]
-extern crate bitflags;
+#![allow(clippy::too_many_arguments)]
 
 use std::{convert::TryFrom, ffi::CStr};
 use winapi::{
@@ -100,10 +99,12 @@ pub type Blob = ComPtr<d3dcommon::ID3DBlob>;
 
 pub type Error = ComPtr<d3dcommon::ID3DBlob>;
 impl Error {
-    pub unsafe fn as_c_str(&self) -> &CStr {
-        debug_assert!(!self.is_null());
-        let data = self.GetBufferPointer();
-        CStr::from_ptr(data as *const _ as *const _)
+    pub fn as_c_str(&self) -> &CStr {
+        assert!(!self.is_null());
+        unsafe {
+            let data = self.GetBufferPointer();
+            CStr::from_ptr(data as *const _ as *const _)
+        }
     }
 }
 

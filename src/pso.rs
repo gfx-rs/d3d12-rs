@@ -9,14 +9,14 @@ use std::{
 };
 use winapi::um::{d3d12, d3dcompiler};
 
-bitflags! {
+bitflags::bitflags! {
     #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
     pub struct PipelineStateFlags: u32 {
         const TOOL_DEBUG = d3d12::D3D12_PIPELINE_STATE_FLAG_TOOL_DEBUG;
     }
 }
 
-bitflags! {
+bitflags::bitflags! {
     #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
     pub struct ShaderCompileFlags: u32 {
         const DEBUG = d3dcompiler::D3DCOMPILE_DEBUG;
@@ -86,8 +86,8 @@ impl<'a> Shader<'a> {
                 target.as_ptr() as *const _,
                 flags.bits(),
                 0,
-                shader.mut_void() as *mut *mut _,
-                error.mut_void() as *mut *mut _,
+                shader.mut_self(),
+                error.mut_self(),
             )
         };
 

@@ -23,7 +23,7 @@ impl<T: Interface> ComPtr<T> {
     /// - if `raw` is not null, it must be a valid pointer to a COM object that implements T.
     pub unsafe fn from_raw(raw: *mut T) -> Self {
         if !raw.is_null() {
-            (&*(raw as *mut IUnknown)).AddRef();
+            (*(raw as *mut IUnknown)).AddRef();
         }
         ComPtr(raw)
     }
@@ -48,7 +48,7 @@ impl<T: Interface> ComPtr<T> {
     /// This is useful when D3D functions initialize objects by filling in a pointer to pointer
     /// by taking `void**` as an argument.
     ///
-    /// # Safety:
+    /// # Safety
     ///
     /// - Any modifications done to this pointer must result in the pointer either:
     ///   - being set to null
@@ -59,7 +59,7 @@ impl<T: Interface> ComPtr<T> {
         // end up with a reference to a temporary.
         let refer: &mut *mut T = &mut self.0;
         let void: *mut *mut c_void = refer.cast();
-        
+
         // SAFETY: This reference is valid for the duration of the borrow due our mutable borrow of self.
         &mut *void
     }
@@ -69,7 +69,7 @@ impl<T: Interface> ComPtr<T> {
     /// This is useful when D3D functions initialize objects by filling in a pointer to pointer
     /// by taking `T**` as an argument.
     ///
-    /// # Safety:
+    /// # Safety
     ///
     /// - Any modifications done to this pointer must result in the pointer either:
     ///   - being set to null
@@ -82,7 +82,7 @@ impl<T: Interface> ComPtr<T> {
 impl<T: Interface> ComPtr<T> {
     /// Returns a reference to the inner pointer casted as a pointer IUnknown.
     ///
-    /// # Safety:
+    /// # Safety
     ///
     /// - This pointer must not be null.
     pub unsafe fn as_unknown(&self) -> &IUnknown {
@@ -92,7 +92,7 @@ impl<T: Interface> ComPtr<T> {
 
     /// Casts the T to U using QueryInterface.
     ///
-    /// # Safety:
+    /// # Safety
     ///
     /// - This pointer must not be null.
     pub unsafe fn cast<U>(&self) -> D3DResult<ComPtr<U>>
@@ -269,12 +269,16 @@ macro_rules! weak_com_inheritance_chain {
         $variant:ident($type:ty);
         $($next_variant:ident),*;
     ) => {
-        // Construct this enum from weak pointer to this interface. For best usability, always use the highest constructor you can. This doesn't try to upcast.
+        #[doc = concat!("Constructs this enum from a ComPtr to ", stringify!($variant), ". For best usability, always use the highest constructor you can. This doesn't try to upcast.")]
+        ///
+        /// # Safety
+        ///
+        #[doc = concat!(" - The value must be a valid pointer to a COM object that implements ", stringify!($variant))]
         $vis unsafe fn $from_name(value: $crate::ComPtr<$type>) -> Self {
             Self::$variant(value)
         }
 
-        // Returns Some if the value implements the interface otherwise returns None.
+        #[doc = concat!("Returns Some if the value implements ", stringify!($variant), ".")]
         $vis fn $as_name(&self) -> Option<&$crate::ComPtr<$type>> {
             match *self {
                 $(
@@ -283,14 +287,14 @@ macro_rules! weak_com_inheritance_chain {
                 Self::$variant(ref v) => Some(v),
                 $(
                     Self::$next_variant(ref v) => {
-                        // v is &ComPtr<NextType> and se cast to &ComPtr<Type>
+                        // v is &ComPtr<NextType> and we cast to &ComPtr<Type>
                         Some(unsafe { std::mem::transmute(v) })
                     }
                 )*
             }
         }
 
-        // Returns the interface if the value implements it, otherwise panics.
+        #[doc = concat!("Returns a ", stringify!($variant), " if the value implements it, otherwise panics.")]
         #[track_caller]
         $vis fn $unwrap_name(&self) -> &$crate::ComPtr<$type> {
             match *self {
