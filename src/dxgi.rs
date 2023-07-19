@@ -49,7 +49,7 @@ pub type Adapter1 = ComPtr<dxgi::IDXGIAdapter1>;
 pub type Adapter2 = ComPtr<dxgi1_2::IDXGIAdapter2>;
 pub type Adapter3 = ComPtr<dxgi1_4::IDXGIAdapter3>;
 pub type Adapter4 = ComPtr<dxgi1_6::IDXGIAdapter4>;
-crate::weak_com_inheritance_chain! {
+crate::com_inheritance_chain! {
     #[derive(Debug, Clone, PartialEq, Hash)]
     pub enum DxgiAdapter {
         Adapter1(dxgi::IDXGIAdapter1), from_adapter1, as_adapter1, adapter1;
@@ -65,7 +65,7 @@ pub type Factory3 = ComPtr<dxgi1_3::IDXGIFactory3>;
 pub type Factory4 = ComPtr<dxgi1_4::IDXGIFactory4>;
 pub type Factory5 = ComPtr<dxgi1_5::IDXGIFactory5>;
 pub type Factory6 = ComPtr<dxgi1_6::IDXGIFactory6>;
-crate::weak_com_inheritance_chain! {
+crate::com_inheritance_chain! {
     #[derive(Debug, Clone, PartialEq, Hash)]
     pub enum DxgiFactory {
         Factory1(dxgi::IDXGIFactory1), from_factory1, as_factory1, factory1;
@@ -83,7 +83,7 @@ pub type SwapChain = ComPtr<dxgi::IDXGISwapChain>;
 pub type SwapChain1 = ComPtr<dxgi1_2::IDXGISwapChain1>;
 pub type SwapChain2 = ComPtr<dxgi1_3::IDXGISwapChain2>;
 pub type SwapChain3 = ComPtr<dxgi1_4::IDXGISwapChain3>;
-crate::weak_com_inheritance_chain! {
+crate::com_inheritance_chain! {
     #[derive(Debug, Clone, PartialEq, Hash)]
     pub enum DxgiSwapchain {
         SwapChain(dxgi::IDXGISwapChain), from_swap_chain, as_swap_chain, swap_chain;

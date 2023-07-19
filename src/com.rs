@@ -171,13 +171,13 @@ impl<T: Interface> Hash for ComPtr<T> {
 /// - the unwrap function (`&self -> ComPtr<actual::ComObject1>` panicing on failure to cast)
 ///
 /// ```rust
-/// # pub use d3d12::weak_com_inheritance_chain;
+/// # pub use d3d12::com_inheritance_chain;
 /// # mod actual {
 /// #     pub struct ComObject; impl winapi::Interface for ComObject { fn uuidof() -> winapi::shared::guiddef::GUID { todo!() } }
 /// #     pub struct ComObject1; impl winapi::Interface for ComObject1 { fn uuidof() -> winapi::shared::guiddef::GUID { todo!() } }
 /// #     pub struct ComObject2; impl winapi::Interface for ComObject2 { fn uuidof() -> winapi::shared::guiddef::GUID { todo!() } }
 /// # }
-/// weak_com_inheritance_chain! {
+/// com_inheritance_chain! {
 ///     pub enum MyComObject {
 ///         MyComObject(actual::ComObject), from_my_com_object, as_my_com_object, my_com_object; // First variant doesn't use "unwrap" as it can never fail
 ///         MyComObject1(actual::ComObject1), from_my_com_object1, as_my_com_object1, unwrap_my_com_object1;
@@ -186,7 +186,7 @@ impl<T: Interface> Hash for ComPtr<T> {
 /// }
 /// ```
 #[macro_export]
-macro_rules! weak_com_inheritance_chain {
+macro_rules! com_inheritance_chain {
     // We first match a human readable enum style, before going into the recursive section.
     //
     // Internal calls to the macro have either the prefix
@@ -207,7 +207,7 @@ macro_rules! weak_com_inheritance_chain {
             ),+
         }
         impl $name {
-            $crate::weak_com_inheritance_chain! {
+            $crate::com_inheritance_chain! {
                 @recursion_logic,
                 $vis,
                 ;
@@ -235,7 +235,7 @@ macro_rules! weak_com_inheritance_chain {
         $($next_variant:ident($next_type:ty), $next_from_name:ident, $next_as_name:ident, $next_unwrap_name:ident);*
     ) => {
         // Actually generate the members for this variant. Needs the previous and future variant names.
-        $crate::weak_com_inheritance_chain! {
+        $crate::com_inheritance_chain! {
             @render_members,
             $vis,
             $this_from_name, $this_as_name, $this_unwrap_name;
@@ -245,7 +245,7 @@ macro_rules! weak_com_inheritance_chain {
         }
 
         // Recurse on ourselves. If there is no future variants left, we'll hit the base case as the final expansion returns no tokens.
-        $crate::weak_com_inheritance_chain! {
+        $crate::com_inheritance_chain! {
             @recursion_logic,
             $vis,
             $($prev_variant),* , $this_variant;
