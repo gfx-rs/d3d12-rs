@@ -1,7 +1,7 @@
 # Change Log
 
 ## v0.7.0 (2023-07-18)
-  - Replace unknowning WeakPtr with owning ComPtr. 
+  - Replace unowning WeakPtr with owning ComPtr. 
 
 ## v0.6.0 (2023-01-25)
   - add helpers for IDXGIFactoryMedia
