@@ -22,7 +22,7 @@ jobs:
       - name: Set up Rust toolchain
         id: setup-rust
         run: |
-          rustup toolchain install ${{ env.MSRV }} -c rustfmt,clippy -p minimal
+          rustup toolchain install ${{ env.MSRV }} -c rustfmt,clippy --profile minimal
 
       - name: caching
         uses: Swatinem/rust-cache@v2
