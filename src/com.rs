@@ -11,44 +11,90 @@ use winapi::{ctypes::c_void, um::unknwnbase::IUnknown, Interface};
 pub struct ComPtr<T: Interface>(*mut T);
 
 impl<T: Interface> ComPtr<T> {
+    /// Creates a null ComPtr.
     pub fn null() -> Self {
         ComPtr(ptr::null_mut())
     }
 
+    /// Create a ComPtr from a raw pointer. This will call AddRef on the pointer.
+    ///
+    /// # Safety
+    ///
+    /// - if `raw` is not null, it must be a valid pointer to a COM object that implements T.
     pub unsafe fn from_raw(raw: *mut T) -> Self {
         if !raw.is_null() {
-            (&*(raw as *mut IUnknown)).AddRef();
+            (*(raw as *mut IUnknown)).AddRef();
         }
         ComPtr(raw)
     }
 
+    /// Returns true if the inner pointer is null.
     pub fn is_null(&self) -> bool {
         self.0.is_null()
     }
 
+    /// Returns the raw inner pointer. May be null.
     pub fn as_ptr(&self) -> *const T {
         self.0
     }
 
+    /// Returns the raw inner pointer as mutable. May be null.
     pub fn as_mut_ptr(&self) -> *mut T {
         self.0
     }
 
-    pub fn mut_void(&mut self) -> *mut *mut c_void {
-        &mut self.0 as *mut *mut _ as *mut *mut _
+    /// Returns a mutable reference to the inner pointer casted as a pointer to c_void.
+    ///
+    /// This is useful when D3D functions initialize objects by filling in a pointer to pointer
+    /// by taking `void**` as an argument.
+    ///
+    /// # Safety
+    ///
+    /// - Any modifications done to this pointer must result in the pointer either:
+    ///   - being set to null
+    ///   - being set to a valid pointer to a COM object that implements T
+    pub unsafe fn mut_void(&mut self) -> &mut *mut c_void {
+        // SAFETY: We must first get a reference pointing to our internal pointer
+        // and only then cast it. As if we cast it, then take a reference, we would
+        // end up with a reference to a temporary.
+        let refer: &mut *mut T = &mut self.0;
+        let void: *mut *mut c_void = refer.cast();
+
+        // SAFETY: This reference is valid for the duration of the borrow due our mutable borrow of self.
+        &mut *void
     }
 
-    pub fn mut_self(&mut self) -> *mut *mut T {
-        &mut self.0 as *mut *mut _
+    /// Returns a mutable reference to the inner pointer.
+    ///
+    /// This is useful when D3D functions initialize objects by filling in a pointer to pointer
+    /// by taking `T**` as an argument.
+    ///
+    /// # Safety
+    ///
+    /// - Any modifications done to this pointer must result in the pointer either:
+    ///   - being set to null
+    ///   - being set to a valid pointer to a COM object that implements T
+    pub fn mut_self(&mut self) -> &mut *mut T {
+        &mut self.0
     }
 }
 
 impl<T: Interface> ComPtr<T> {
+    /// Returns a reference to the inner pointer casted as a pointer IUnknown.
+    ///
+    /// # Safety
+    ///
+    /// - This pointer must not be null.
     pub unsafe fn as_unknown(&self) -> &IUnknown {
         debug_assert!(!self.is_null());
         &*(self.0 as *mut IUnknown)
     }
 
+    /// Casts the T to U using QueryInterface.
+    ///
+    /// # Safety
+    ///
+    /// - This pointer must not be null.
     pub unsafe fn cast<U>(&self) -> D3DResult<ComPtr<U>>
     where
         U: Interface,
@@ -86,7 +132,7 @@ impl<T: Interface> Drop for ComPtr<T> {
 impl<T: Interface> Deref for ComPtr<T> {
     type Target = T;
     fn deref(&self) -> &T {
-        debug_assert!(!self.is_null());
+        assert!(!self.is_null());
         unsafe { &*self.0 }
     }
 }
@@ -126,8 +172,8 @@ impl<T: Interface> Hash for ComPtr<T> {
 ///
 /// ```rust
 /// # pub use d3d12::weak_com_inheritance_chain;
-/// # mod actual { 
-/// #     pub struct ComObject; impl winapi::Interface for ComObject { fn uuidof() -> winapi::shared::guiddef::GUID { todo!() } } 
+/// # mod actual {
+/// #     pub struct ComObject; impl winapi::Interface for ComObject { fn uuidof() -> winapi::shared::guiddef::GUID { todo!() } }
 /// #     pub struct ComObject1; impl winapi::Interface for ComObject1 { fn uuidof() -> winapi::shared::guiddef::GUID { todo!() } }
 /// #     pub struct ComObject2; impl winapi::Interface for ComObject2 { fn uuidof() -> winapi::shared::guiddef::GUID { todo!() } }
 /// # }
@@ -223,12 +269,16 @@ macro_rules! weak_com_inheritance_chain {
         $variant:ident($type:ty);
         $($next_variant:ident),*;
     ) => {
-        // Construct this enum from weak pointer to this interface. For best usability, always use the highest constructor you can. This doesn't try to upcast.
+        #[doc = concat!("Constructs this enum from a ComPtr to ", stringify!($variant), ". For best usability, always use the highest constructor you can. This doesn't try to upcast.")]
+        ///
+        /// # Safety
+        ///
+        #[doc = concat!(" - The value must be a valid pointer to a COM object that implements ", stringify!($variant))]
         $vis unsafe fn $from_name(value: $crate::ComPtr<$type>) -> Self {
             Self::$variant(value)
         }
 
-        // Returns Some if the value implements the interface otherwise returns None.
+        #[doc = concat!("Returns Some if the value implements ", stringify!($variant), ".")]
         $vis fn $as_name(&self) -> Option<&$crate::ComPtr<$type>> {
             match *self {
                 $(
@@ -237,14 +287,14 @@ macro_rules! weak_com_inheritance_chain {
                 Self::$variant(ref v) => Some(v),
                 $(
                     Self::$next_variant(ref v) => {
-                        // v is &ComPtr<NextType> and se cast to &ComPtr<Type>
+                        // v is &ComPtr<NextType> and we cast to &ComPtr<Type>
                         Some(unsafe { std::mem::transmute(v) })
                     }
                 )*
             }
         }
 
-        // Returns the interface if the value implements it, otherwise panics.
+        #[doc = concat!("Returns a ", stringify!($variant), " if the value implements it, otherwise panics.")]
         #[track_caller]
         $vis fn $unwrap_name(&self) -> &$crate::ComPtr<$type> {
             match *self {
