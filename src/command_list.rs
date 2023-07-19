@@ -263,7 +263,7 @@ impl GraphicsCommandList {
         }
     }
 
-    pub fn set_pipeline_state(&self, pso:&PipelineState) {
+    pub fn set_pipeline_state(&self, pso: &PipelineState) {
         unsafe {
             self.SetPipelineState(pso.as_mut_ptr());
         }
