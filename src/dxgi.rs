@@ -9,7 +9,7 @@ use winapi::{
     Interface,
 };
 
-bitflags! {
+bitflags::bitflags! {
     #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
     pub struct FactoryCreationFlags: u32 {
         const DEBUG = dxgi1_3::DXGI_CREATE_FACTORY_DEBUG;
@@ -211,7 +211,10 @@ impl SwapchainDesc {
 }
 
 impl Factory1 {
-    pub fn create_swapchain(
+    /// # Safety
+    ///
+    /// - `queue` must be a valid pointer to a D3D device.
+    pub unsafe fn create_swapchain(
         &self,
         queue: *mut IUnknown,
         hwnd: HWND,
@@ -242,8 +245,7 @@ impl Factory1 {
         };
 
         let mut swapchain = SwapChain::null();
-        let hr =
-            unsafe { self.CreateSwapChain(queue, &mut desc, swapchain.mut_void() as *mut *mut _) };
+        let hr = unsafe { self.CreateSwapChain(queue, &mut desc, swapchain.mut_self()) };
 
         (swapchain, hr)
     }
@@ -251,7 +253,10 @@ impl Factory1 {
 
 impl Factory2 {
     // TODO: interface not complete
-    pub fn create_swapchain_for_hwnd(
+    /// # Safety
+    ///
+    /// - `queue` must be a valid pointer to a D3D device.
+    pub unsafe fn create_swapchain_for_hwnd(
         &self,
         queue: *mut IUnknown,
         hwnd: HWND,
@@ -265,14 +270,17 @@ impl Factory2 {
                 &desc.to_desc1(),
                 ptr::null(),
                 ptr::null_mut(),
-                swap_chain.mut_void() as *mut *mut _,
+                swap_chain.mut_self(),
             )
         };
 
         (swap_chain, hr)
     }
 
-    pub fn create_swapchain_for_composition(
+    /// # Safety
+    ///
+    /// - `queue` must be a valid pointer to a D3D device.
+    pub unsafe fn create_swapchain_for_composition(
         &self,
         queue: *mut IUnknown,
         desc: &SwapchainDesc,
@@ -283,7 +291,7 @@ impl Factory2 {
                 queue,
                 &desc.to_desc1(),
                 ptr::null_mut(),
-                swap_chain.mut_void() as *mut *mut _,
+                swap_chain.mut_self(),
             )
         };
 
@@ -308,14 +316,17 @@ impl Factory4 {
 
     pub fn enumerate_adapters(&self, id: u32) -> D3DResult<Adapter1> {
         let mut adapter = Adapter1::null();
-        let hr = unsafe { self.EnumAdapters1(id, adapter.mut_void() as *mut *mut _) };
+        let hr = unsafe { self.EnumAdapters1(id, adapter.mut_self()) };
 
         (adapter, hr)
     }
 }
 
 impl FactoryMedia {
-    pub fn create_swapchain_for_composition_surface_handle(
+    /// # Safety
+    ///
+    /// - `queue` must be a valid pointer to a D3D device.
+    pub unsafe fn create_swapchain_for_composition_surface_handle(
         &self,
         queue: *mut IUnknown,
         surface_handle: HANDLE,
@@ -328,7 +339,7 @@ impl FactoryMedia {
                 surface_handle,
                 &desc.to_desc1(),
                 ptr::null_mut(),
-                swap_chain.mut_void() as *mut *mut _,
+                swap_chain.mut_self(),
             )
         };
 
@@ -336,7 +347,7 @@ impl FactoryMedia {
     }
 }
 
-bitflags! {
+bitflags::bitflags! {
     #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
     pub struct SwapChainPresentFlags: u32 {
         const DXGI_PRESENT_DO_NOT_SEQUENCE = dxgi::DXGI_PRESENT_DO_NOT_SEQUENCE;
