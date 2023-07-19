@@ -64,16 +64,21 @@ impl<T: Interface> ComPtr<T> {
 
 impl<T: Interface> Clone for ComPtr<T> {
     fn clone(&self) -> Self {
-        debug_assert!(!self.is_null());
-        unsafe { self.as_unknown().AddRef(); }
+        if !self.is_null() {
+            unsafe {
+                self.as_unknown().AddRef();
+            }
+        }
         ComPtr(self.0)
     }
 }
 
 impl<T: Interface> Drop for ComPtr<T> {
     fn drop(&mut self) {
-        if !self.0.is_null() {
-            unsafe { self.as_unknown().Release(); }
+        if !self.is_null() {
+            unsafe {
+                self.as_unknown().Release();
+            }
         }
     }
 }
