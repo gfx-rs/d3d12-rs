@@ -39,4 +39,4 @@ jobs:
 
       - name: doc
         run: |
-          cargo +${{ env.MSRV }} doc --all-features
+          cargo +${{ env.MSRV }} doc --all-features --no-deps
